@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>리와인드 코드 만들기</title>
+<style>
+  :root {
+    --blue: #3182F6;
+    --blue-dark: #1B64DA;
+    --blue-bg: #E8F3FF;
+    --grey-900: #191F28;
+    --grey-700: #333D4B;
+    --grey-600: #4E5968;
+    --grey-500: #6B7684;
+    --grey-400: #8B95A1;
+    --grey-300: #B0B8C1;
+    --grey-200: #E5E8EB;
+    --grey-100: #F2F4F6;
+    --grey-50: #F9FAFB;
+    --green: #10B981;
+    --red: #F04452;
+    --amber-bg: #FFF8E6;
+    --amber-bd: #F5D889;
+    --amber-tx: #8D6708;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI',
+      'Noto Sans KR', 'Malgun Gothic', '맑은 고딕', sans-serif;
+    background: var(--grey-50);
+    color: var(--grey-900);
+    line-height: 1.55;
+    word-break: keep-all;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 48px 20px 40px; }
+
+  /* 히어로 */
+  .hero { text-align: center; margin-bottom: 36px; }
+  .hero .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--blue-bg); color: var(--blue-dark);
+    font-size: 13px; font-weight: 600;
+    padding: 6px 14px; border-radius: 999px; margin-bottom: 16px;
+  }
+  .hero h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
+  .hero .sub { margin-top: 10px; font-size: 16px; color: var(--grey-600); }
+  .hero .sub b { color: var(--grey-900); font-weight: 700; }
+
+  /* 드롭존 */
+  .dropzone {
+    background: #fff; border: 2px dashed var(--grey-200); border-radius: 20px;
+    padding: 44px 24px; text-align: center; cursor: pointer;
+    transition: border-color .15s, background .15s, transform .1s;
+  }
+  .dropzone:hover { border-color: var(--blue); }
+  .dropzone.over { border-color: var(--blue); background: var(--blue-bg); transform: scale(1.01); }
+  .dropzone .icon { font-size: 40px; margin-bottom: 12px; }
+  .dropzone .dz-title { font-size: 17px; font-weight: 700; }
+  .dropzone .dz-or { margin: 10px 0 14px; color: var(--grey-400); font-size: 13px; }
+  .btn {
+    display: inline-block; border: 0; cursor: pointer;
+    background: var(--blue); color: #fff;
+    font-size: 15px; font-weight: 700; font-family: inherit;
+    padding: 12px 24px; border-radius: 12px;
+    transition: background .15s;
+  }
+  .btn:hover { background: var(--blue-dark); }
+  .btn.ghost { background: var(--grey-100); color: var(--grey-700); }
+  .btn.ghost:hover { background: var(--grey-200); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .dropzone .hint { margin-top: 18px; font-size: 13px; color: var(--grey-500); }
+  .dropzone .hint b { color: var(--grey-700); }
+
+  /* 카드 공통 */
+  .panel {
+    background: #fff; border: 1px solid var(--grey-200); border-radius: 20px;
+    padding: 28px 24px; margin-top: 20px;
+  }
+  .panel h2 { font-size: 18px; font-weight: 800; margin-bottom: 18px; letter-spacing: -0.01em; }
+
+  /* 진행 단계 */
+  .steps { list-style: none; }
+  .steps li {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 0; font-size: 15px; color: var(--grey-400);
+  }
+  .steps li .dot {
+    flex: none; width: 22px; height: 22px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--grey-100); color: var(--grey-300); font-size: 12px;
+  }
+  .steps li.active { color: var(--grey-900); font-weight: 600; }
+  .steps li.active .dot {
+    background: var(--blue-bg);
+    border: 2px solid var(--blue);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .steps li.done { color: var(--grey-600); }
+  .steps li.done .dot { background: var(--blue); color: #fff; }
+  .steps li .detail { margin-left: auto; font-size: 13px; color: var(--grey-500); font-variant-numeric: tabular-nums; }
+  @keyframes pulse { 50% { opacity: .5; } }
+
+  .bar { height: 8px; background: var(--grey-100); border-radius: 999px; overflow: hidden; margin-top: 16px; }
+  .bar .fill { height: 100%; width: 0%; background: var(--blue); border-radius: 999px; transition: width .2s; }
+  .bar-label { display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: var(--grey-500); font-variant-numeric: tabular-nums; }
+
+  /* 경고·안내 배너 */
+  .banner {
+    border-radius: 14px; padding: 14px 16px; margin-bottom: 18px; font-size: 14px;
+  }
+  .banner.warn { background: var(--amber-bg); border: 1px solid var(--amber-bd); color: var(--amber-tx); }
+  .banner.warn b { display: block; margin-bottom: 6px; font-size: 15px; }
+  .banner.warn ul { margin: 4px 0 0 18px; }
+  .banner.info { background: var(--blue-bg); color: var(--blue-dark); }
+
+  /* 결과 */
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  @media (min-width: 560px) { .cards { grid-template-columns: repeat(4, 1fr); } }
+  .card {
+    background: var(--grey-50); border-radius: 16px; padding: 16px 14px;
+  }
+  .card .k { font-size: 13px; color: var(--grey-500); }
+  .card .v { font-size: 20px; font-weight: 800; margin-top: 2px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .minis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 12px; margin-top: 14px; }
+  .mini { font-size: 13px; color: var(--grey-500); display: flex; justify-content: space-between; gap: 8px; padding: 6px 2px; border-bottom: 1px dashed var(--grey-100); }
+  .mini b { color: var(--grey-700); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .optin {
+    display: flex; align-items: center; gap: 8px; margin-top: 18px;
+    font-size: 14px; color: var(--grey-600); cursor: pointer; user-select: none;
+  }
+  .optin input { width: 16px; height: 16px; accent-color: var(--blue); cursor: pointer; }
+
+  .copy-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+  .copy-row .btn { flex: none; }
+  .share-warn {
+    margin-top: 12px; font-size: 13px; color: var(--grey-600);
+    background: var(--grey-100); border-radius: 12px; padding: 10px 14px;
+  }
+  .share-warn b { color: var(--grey-900); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(8px);
+    background: var(--grey-900); color: #fff; font-size: 14px; font-weight: 600;
+    padding: 12px 20px; border-radius: 12px; opacity: 0; pointer-events: none;
+    transition: opacity .2s, transform .2s; max-width: 90vw; text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  details.selftest { margin-top: 18px; border-top: 1px solid var(--grey-100); padding-top: 14px; }
+  details.selftest summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--grey-600); }
+  .st-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+  .st-table td { padding: 6px 4px; border-bottom: 1px solid var(--grey-100); }
+  .st-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .st-pass { color: var(--green); font-weight: 800; }
+  .st-fail { color: var(--red); font-weight: 800; }
+
+  /* 에러 */
+  .error-box { border-color: #FAD1D5; background: #FFF5F6; }
+  .error-box h2 { color: var(--red); }
+  .error-box p { font-size: 14px; color: var(--grey-700); }
+  .error-box .btn { margin-top: 16px; }
+
+  footer { margin-top: 40px; text-align: center; }
+  .privacy {
+    font-size: 13px; color: var(--grey-500);
+    background: var(--grey-100); border-radius: 12px; padding: 12px 16px;
+  }
+  .lic { margin-top: 12px; font-size: 12px; color: var(--grey-400); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <div class="badge">&#128274; 100% 로컬 처리</div>
+    <h1>리와인드 코드 만들기</h1>
+    <p class="sub">
+      인스타그램 데이터 내보내기 zip을 올리면 리와인드 코드로 바꿔드려요.<br>
+      <b>zip은 이 브라우저 밖으로 나가지 않아요.</b>
+    </p>
+  </section>
+
+  <section class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="zip 파일 업로드">
+    <input type="file" id="fileInput" accept=".zip,application/zip,application/x-zip-compressed" multiple hidden>
+    <div class="icon">&#128230;</div>
+    <div class="dz-title">여기에 zip 파일을 끌어다 놓으세요</div>
+    <div class="dz-or">또는</div>
+    <button type="button" class="btn" id="pickBtn">파일 선택</button>
+    <p class="hint">
+      인스타그램 앱 &rarr; 설정 &rarr; 개인정보 센터 &rarr; 내 정보 다운로드에서<br>
+      <b>HTML 형식</b>으로 내려받은 zip 파일을 사용해 주세요.<br>
+      zip이 <b>여러 개로 나뉘어</b> 왔다면 모두 함께 선택하세요.
+    </p>
+  </section>
+
+  <section class="panel hidden" id="progressPanel" aria-live="polite">
+    <h2>변환 중이에요</h2>
+    <ol class="steps" id="steps">
+      <li data-step="unzip"><span class="dot">1</span>압축 해제<span class="detail"></span></li>
+      <li data-step="conn"><span class="dot">2</span>팔로우 관계<span class="detail"></span></li>
+      <li data-step="likes"><span class="dot">3</span>좋아요<span class="detail"></span></li>
+      <li data-step="stories"><span class="dot">4</span>스토리<span class="detail"></span></li>
+      <li data-step="dm"><span class="dot">5</span>DM<span class="detail"></span></li>
+      <li data-step="final"><span class="dot">6</span>완성<span class="detail"></span></li>
+    </ol>
+    <div class="bar"><div class="fill" id="barFill"></div></div>
+    <div class="bar-label"><span id="barPct">0%</span><span id="barBytes"></span></div>
+  </section>
+
+  <section class="panel hidden" id="resultPanel">
+    <div class="banner warn hidden" id="healthBanner"></div>
+    <div class="banner info hidden" id="truncBanner">
+      목록이 길어 코드에는 일부만 담았어요. 전체 개수 통계는 그대로 유지돼요.
+    </div>
+    <h2>결과 미리보기</h2>
+    <div class="cards">
+      <div class="card"><div class="k">팔로워</div><div class="v" id="cFollowers">-</div></div>
+      <div class="card"><div class="k">맞팔</div><div class="v" id="cMutual">-</div></div>
+      <div class="card"><div class="k">DM 총 메시지</div><div class="v" id="cDm">-</div></div>
+      <div class="card"><div class="k">DM 피크 월</div><div class="v" id="cPeak">-</div></div>
+    </div>
+    <div class="minis" id="minis"></div>
+    <label class="optin">
+      <input type="checkbox" id="captionOpt" checked>
+      피크 시절 스토리 문구 포함 (@멘션은 가려지고, 연락처는 제거돼요)
+    </label>
+    <div class="copy-row">
+      <button type="button" class="btn" id="copyBtn">리와인드 코드 복사</button>
+      <button type="button" class="btn ghost" id="resetBtn">다른 파일 변환</button>
+    </div>
+    <p class="share-warn">
+      &#9888;&#65039; 이 코드에는 <b>회원님과 팔로워들의 계정명</b>이 들어 있어요.
+      <b>다른 사람에게 공유하지 마세요.</b> 미니앱에 붙여넣은 뒤에는 클립보드를 비우는 것을 권장해요.
+    </p>
+    <details class="selftest">
+      <summary>코드 자체 검증 (디코딩 &rarr; 스키마 재검증)</summary>
+      <button type="button" class="btn ghost" id="selftestBtn" style="margin-top:12px">검증 실행</button>
+      <div id="selftestOut"></div>
+    </details>
+  </section>
+
+  <section class="panel error-box hidden" id="errorPanel">
+    <h2 id="errorTitle">변환할 수 없어요</h2>
+    <p id="errorMsg"></p>
+    <button type="button" class="btn" id="errorResetBtn">다시 시도</button>
+  </section>
+
+  <footer>
+    <p class="privacy">
+      모든 처리는 이 기기의 브라우저 안에서만 이루어집니다.<br>
+      어떤 데이터도 서버로 전송되지 않습니다.
+    </p>
+    <p class="lic">zip 해제 라이브러리: fflate v0.8.3 &middot; MIT License &copy; Arjun Barrett (로컬 번들)</p>
+  </footer>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="lib/fflate.min.js"></script>
+<script>
+'use strict';
+
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var dropzone = $('dropzone');
+  var fileInput = $('fileInput');
+  var progressPanel = $('progressPanel');
+  var resultPanel = $('resultPanel');
+  var errorPanel = $('errorPanel');
+  var stepsEl = $('steps');
+  var worker = null;
+
+  var STEP_ORDER = ['unzip', 'conn', 'likes', 'stories', 'dm', 'final'];
+  var LANG_LABEL = { ko: '한국어', en: '영어', other: '알 수 없음' };
+
+  function fmt(n) { return (n === null || n === undefined) ? '-' : Number(n).toLocaleString('ko-KR'); }
+  function fmtMonth(ym) {
+    if (!ym) return '-';
+    return (+ym.slice(0, 4)) + '년 ' + (+ym.slice(5, 7)) + '월';
+  }
+  function fmtBytes(b) {
+    if (b >= 1024 * 1024 * 1024) return (b / 1024 / 1024 / 1024).toFixed(2) + 'GB';
+    if (b >= 1024 * 1024) return (b / 1024 / 1024).toFixed(1) + 'MB';
+    return Math.round(b / 1024) + 'KB';
+  }
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast._h);
+    toast._h = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+
+  /* ---------- 단계 표시 ---------- */
+  function setStep(id, state, detail) {
+    var li = stepsEl.querySelector('[data-step="' + id + '"]');
+    if (!li) return;
+    li.classList.remove('active', 'done');
+    if (state) li.classList.add(state);
+    if (detail !== undefined) li.querySelector('.detail').textContent = detail;
+  }
+  function markUpTo(stageIdx) {
+    for (var i = 0; i < STEP_ORDER.length; i++) {
+      var li = stepsEl.querySelector('[data-step="' + STEP_ORDER[i] + '"]');
+      if (i < stageIdx) { li.classList.remove('active'); li.classList.add('done'); }
+    }
+  }
+
+  function resetUI() {
+    if (worker) { worker.terminate(); worker = null; }
+    progressPanel.classList.add('hidden');
+    resultPanel.classList.add('hidden');
+    errorPanel.classList.add('hidden');
+    dropzone.classList.remove('hidden');
+    STEP_ORDER.forEach(function (s) { setStep(s, null, ''); });
+    $('barFill').style.width = '0%';
+    $('barPct').textContent = '0%';
+    $('barBytes').textContent = '';
+    $('selftestOut').innerHTML = '';
+    $('healthBanner').classList.add('hidden');
+    $('truncBanner').classList.add('hidden');
+    $('captionOpt').checked = true;
+    fileInput.value = '';
+  }
+
+  function showError(kind, message) {
+    progressPanel.classList.add('hidden');
+    errorPanel.classList.remove('hidden');
+    var title = $('errorTitle'), msg = $('errorMsg');
+    if (kind === 'json-export') {
+      title.textContent = 'JSON 형식 내보내기는 아직 지원하지 않아요';
+      msg.innerHTML = '내려받은 zip이 JSON 형식으로 보여요. 인스타그램의 <b>내 정보 다운로드</b>에서 형식을 <b>HTML</b>로 선택해 다시 내보낸 뒤 시도해 주세요.';
+    } else if (kind === 'not-instagram') {
+      title.textContent = '인스타그램 내보내기 zip이 아닌 것 같아요';
+      msg.textContent = 'zip 안에서 인스타그램 데이터 파일을 찾지 못했어요. 인스타그램 공식 데이터 내보내기(HTML 형식) zip인지 확인해 주세요.';
+    } else if (kind === 'too-big-fallback') {
+      title.textContent = '이 브라우저에서 처리하지 못했어요';
+      msg.textContent = message || '파일이 커서 대체 방식을 쓸 수 없어요. 최신 Chrome/Edge에서 다시 시도해 주세요.';
+    } else {
+      title.textContent = '변환 중 문제가 발생했어요';
+      msg.textContent = '파일을 다시 확인한 뒤 시도해 주세요. (' + (message || '알 수 없는 오류') + ')';
+    }
+  }
+
+  /* ---------- 워커 메시지 ---------- */
+  function onWorkerMessage(ev) {
+    var m = ev.data;
+    if (m.type === 'progress') {
+      if (m.stage === 'unzip') {
+        setStep('unzip', 'active');
+        if (m.total) {
+          var pct = Math.min(100, Math.round((m.bytes / m.total) * 100));
+          $('barFill').style.width = pct + '%';
+          $('barPct').textContent = pct + '%';
+          $('barBytes').textContent = fmtBytes(m.bytes) + ' / ' + fmtBytes(m.total);
+          setStep('unzip', 'active', pct + '%');
+        }
+        if (m.dmThreads) {
+          setStep('dm', 'active', fmt(m.dmThreads) + ' 스레드 · ' + fmt(m.dmMsgs) + ' 메시지');
+        }
+      } else if (m.stage === 'connections') {
+        markUpTo(1); setStep('unzip', 'done', '완료');
+        $('barFill').style.width = '100%'; $('barPct').textContent = '100%';
+        setStep('conn', 'active', '분석 중');
+      } else if (m.stage === 'likes') {
+        markUpTo(2); setStep('conn', 'done', '');
+        setStep('likes', 'active', '분석 중');
+      } else if (m.stage === 'stories') {
+        markUpTo(3); setStep('likes', 'done', '');
+        setStep('stories', 'active', '분석 중');
+      } else if (m.stage === 'dm') {
+        markUpTo(4); setStep('stories', 'done', '');
+        setStep('dm', 'active', fmt(m.dmThreads) + ' 스레드 · ' + fmt(m.dmMsgs) + ' 메시지 집계 중');
+      } else if (m.stage === 'assemble' || m.stage === 'encode') {
+        markUpTo(5); setStep('dm', 'done');
+        setStep('final', 'active', m.stage === 'encode' ? '코드 압축 중' : '조립 중');
+      }
+    } else if (m.type === 'done') {
+      markUpTo(6);
+      setStep('final', 'done', '완료');
+      window.__rewind = { code: m.code, data: m.data, size: m.size, health: m.health };
+      showResult(m);
+    } else if (m.type === 'reencoded') {
+      window.__rewind = { code: m.code, data: m.data, size: m.size, health: m.health };
+      $('truncBanner').classList.toggle('hidden', !m.truncated);
+      $('captionOpt').disabled = false;
+      toast('코드를 다시 만들었어요');
+    } else if (m.type === 'error') {
+      showError(m.kind, m.message);
+    }
+  }
+
+  /* ---------- 변환 시작 (분할 zip 다중 파일 지원) ---------- */
+  function startConvert(fileList) {
+    var files = Array.prototype.slice.call(fileList || []);
+    if (!files.length) return;
+    var zips = files.filter(function (f) {
+      return /\.zip$/i.test(f.name) || (f.type && f.type.indexOf('zip') >= 0);
+    });
+    if (!zips.length) {
+      toast('zip 파일을 올려주세요');
+      return;
+    }
+    resetUI();
+    dropzone.classList.add('hidden');
+    progressPanel.classList.remove('hidden');
+    setStep('unzip', 'active', zips.length > 1 ? 'zip ' + zips.length + '개' : '시작');
+    try {
+      worker = new Worker('worker.js');
+    } catch (e) {
+      showError('fatal', '웹워커를 시작할 수 없어요 — 로컬 서버(http://)로 열어 주세요');
+      return;
+    }
+    worker.onmessage = onWorkerMessage;
+    worker.onerror = function (e) { showError('fatal', e.message); };
+    worker.postMessage({ type: 'convert', files: zips, includeCaptions: $('captionOpt').checked });
+  }
+
+  /* ---------- 결과 표시 ---------- */
+  function showResult(m) {
+    var d = m.data;
+    progressPanel.classList.add('hidden');
+    resultPanel.classList.remove('hidden');
+
+    // 무결성 경고 (침묵 실패 금지)
+    var hb = $('healthBanner');
+    if (m.health && !m.health.ok) {
+      var items = (m.health.warnings || []).map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('');
+      hb.innerHTML = '<b>이 내보내기 형식을 완전히 지원하지 못했어요 (언어: ' +
+        esc(LANG_LABEL[m.health.lang] || m.health.lang) + ')</b>' +
+        '아래 항목은 수치가 정확하지 않을 수 있어요.<ul>' + items + '</ul>';
+      hb.classList.remove('hidden');
+    } else {
+      hb.classList.add('hidden');
+    }
+    $('truncBanner').classList.toggle('hidden', !m.truncated);
+
+    $('cFollowers').textContent = fmt(d.hero.followers);
+    $('cMutual').textContent = fmt(d.hero.mutual);
+    $('cDm').textContent = fmt(d.hero.dmTotal);
+    var peak = (d.peaks && d.peaks.dm && d.peaks.dm[0]) ? d.peaks.dm[0].month
+      : (d.peaks && d.peaks.story && d.peaks.story[0]) ? d.peaks.story[0].month : null;
+    $('cPeak').textContent = fmtMonth(peak);
+
+    var storySum = 0;
+    if (d.storiesByYear) Object.keys(d.storiesByYear).forEach(function (y) { storySum += d.storiesByYear[y]; });
+    var totals = (d.relations && d.relations.totals) || {};
+    var minis = [
+      ['팔로잉', d.hero.following],
+      ['좋아요 누른 수', d.likesTotal],
+      ['내 스토리', storySum],
+      ['정리 후보', totals.cleanup],
+      ['짝사랑 계정', totals.oneSided],
+      ['메시지 요청', d.dm ? d.dm.reqMessages : null]
+    ];
+    $('minis').innerHTML = minis.map(function (r) {
+      return '<div class="mini"><span>' + r[0] + '</span><b>' + fmt(r[1]) + '</b></div>';
+    }).join('');
+  }
+
+  /* ---------- 캡션 옵트인 토글 → 재인코딩 ---------- */
+  $('captionOpt').addEventListener('change', function () {
+    if (!worker || !window.__rewind) return;
+    $('captionOpt').disabled = true;
+    worker.postMessage({ type: 'reencode', includeCaptions: $('captionOpt').checked });
+  });
+
+  /* ---------- 복사 (제3자 정보 고지 포함) ---------- */
+  $('copyBtn').addEventListener('click', function () {
+    var code = window.__rewind && window.__rewind.code;
+    if (!code) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(
+        function () { toast('복사 완료 — 팔로워 계정명이 담겨 있으니 다른 사람에게 공유하지 마세요'); },
+        function () { legacyCopy(code); }
+      );
+    } else {
+      legacyCopy(code);
+    }
+  });
+  function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      toast('복사 완료 — 팔로워 계정명이 담겨 있으니 다른 사람에게 공유하지 마세요');
+    } catch (e) {
+      toast('복사에 실패했어요 — 콘솔의 window.__rewind.code를 이용하세요');
+    }
+    document.body.removeChild(ta);
+  }
+
+  /* ---------- 자체 검증: 디코딩 → 스키마 재검증 ---------- */
+  function b64urlToU8(s) {
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    var bin = atob(s);
+    var u8 = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  }
+  function decodeRewind(code) {
+    if (code.indexOf('RW1P.') === 0) {
+      return Promise.resolve(JSON.parse(new TextDecoder().decode(b64urlToU8(code.slice(5)))));
+    }
+    if (code.indexOf('RW1.') !== 0) return Promise.reject(new Error('알 수 없는 접두사'));
+    var u8 = b64urlToU8(code.slice(4));
+    if (typeof DecompressionStream === 'function') {
+      try {
+        var ds = new DecompressionStream('deflate-raw');
+        return new Response(new Blob([u8]).stream().pipeThrough(ds)).arrayBuffer()
+          .then(function (buf) { return JSON.parse(new TextDecoder().decode(buf)); });
+      } catch (e) { /* 폴백 */ }
+    }
+    return Promise.resolve(JSON.parse(new TextDecoder().decode(fflate.inflateSync(u8))));
+  }
+
+  function validateSchema(d) {
+    var errs = [];
+    var isNum = function (x) { return typeof x === 'number' && isFinite(x); };
+    if (d.v !== 1) errs.push('v !== 1');
+    if (typeof d.generatedAt !== 'string') errs.push('generatedAt 누락');
+    if (typeof d.truncated !== 'boolean') errs.push('truncated 누락');
+    if (['ko', 'en', 'other'].indexOf(d.lang) < 0) errs.push('lang 값 오류');
+    if (!d.hero || !isNum(d.hero.followers) || !isNum(d.hero.following) || !isNum(d.hero.mutual) || !isNum(d.hero.dmTotal)) errs.push('hero 필수 필드 오류');
+    if (!Array.isArray(d.months)) errs.push('months 배열 아님');
+    if (!d.series || !Array.isArray(d.series.likes) || !Array.isArray(d.series.storyLikes) || !Array.isArray(d.series.dm)) errs.push('series 누락');
+    else if (d.months && (d.series.likes.length !== d.months.length || d.series.storyLikes.length !== d.months.length || d.series.dm.length !== d.months.length)) errs.push('series 길이가 months와 다름');
+    if (!d.relations || !d.relations.totals || !isNum(d.relations.totals.cleanup)) errs.push('relations.totals 누락');
+    else {
+      if (d.relations.cleanup.length > 1000 || d.relations.oneSided.length > 1000 || d.relations.fans.length > 1000) errs.push('relations 상한 초과');
+      if (d.relations.blocked.length > 200) errs.push('blocked 상한 초과');
+    }
+    if (d.dm && ['high', 'low'].indexOf(d.dm.ownerConfidence) < 0) errs.push('ownerConfidence 값 오류');
+    if (d.peaks && d.peaks.story) {
+      d.peaks.story.forEach(function (p) {
+        (p.captions || []).forEach(function (c) {
+          if (/@[A-Za-z0-9._]+/.test(c)) errs.push('캡션에 마스킹 안 된 멘션 존재');
+          if (/[\w.+-]+@[\w-]+\.[\w-]+/.test(c)) errs.push('캡션에 이메일 존재');
+        });
+      });
+    }
+    return errs;
+  }
+
+  window.__rewindSelfTest = function () {
+    var r = window.__rewind;
+    if (!r) return Promise.reject(new Error('아직 코드가 생성되지 않았어요'));
+    return decodeRewind(r.code).then(function (decoded) {
+      var errs = validateSchema(decoded);
+      var same = JSON.stringify(decoded) === JSON.stringify(r.data);
+      if (!same) errs.push('디코딩 결과가 원본 JSON과 다름');
+      if (r.code.length > 50 * 1024) errs.push('코드가 50KB를 초과함');
+      var storySum = 0;
+      if (decoded.storiesByYear) Object.keys(decoded.storiesByYear).forEach(function (y) { storySum += decoded.storiesByYear[y]; });
+      return {
+        pass: errs.length === 0,
+        errors: errs,
+        vectors: {
+          lang: decoded.lang,
+          truncated: decoded.truncated,
+          followers: decoded.hero.followers,
+          following: decoded.hero.following,
+          mutual: decoded.hero.mutual,
+          cleanup: decoded.relations ? decoded.relations.totals.cleanup : null,
+          oneSided: decoded.relations ? decoded.relations.totals.oneSided : null,
+          dmTotal: decoded.hero.dmTotal,
+          reqMessages: decoded.dm ? decoded.dm.reqMessages : null,
+          ownerConfidence: decoded.dm ? decoded.dm.ownerConfidence : null,
+          storySum: storySum,
+          likesTotal: decoded.likesTotal
+        },
+        decoded: decoded
+      };
+    });
+  };
+
+  $('selftestBtn').addEventListener('click', function () {
+    var out = $('selftestOut');
+    out.innerHTML = '<p style="font-size:13px;color:var(--grey-500);margin-top:10px">검증 중…</p>';
+    window.__rewindSelfTest().then(function (r) {
+      var rows = Object.keys(r.vectors).map(function (k) {
+        var v = r.vectors[k];
+        return '<tr><td>' + k + '</td><td>' + (typeof v === 'number' ? fmt(v) : esc(String(v))) + '</td></tr>';
+      }).join('');
+      out.innerHTML =
+        '<p style="margin-top:12px;font-size:14px">스키마 검증: ' +
+        (r.pass ? '<span class="st-pass">통과</span>' : '<span class="st-fail">실패 — ' + esc(r.errors.join(', ')) + '</span>') +
+        '</p><table class="st-table">' + rows + '</table>';
+    }).catch(function (e) {
+      out.innerHTML = '<p style="margin-top:12px" class="st-fail">검증 오류: ' + esc(e.message) + '</p>';
+    });
+  });
+
+  /* ---------- 파일 입력 이벤트 ---------- */
+  $('pickBtn').addEventListener('click', function (e) { e.stopPropagation(); fileInput.click(); });
+  dropzone.addEventListener('click', function () { fileInput.click(); });
+  dropzone.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+  });
+  fileInput.addEventListener('change', function () { startConvert(fileInput.files); });
+
+  ['dragenter', 'dragover'].forEach(function (t) {
+    dropzone.addEventListener(t, function (e) { e.preventDefault(); dropzone.classList.add('over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (t) {
+    dropzone.addEventListener(t, function (e) { e.preventDefault(); dropzone.classList.remove('over'); });
+  });
+  dropzone.addEventListener('drop', function (e) {
+    startConvert(e.dataTransfer && e.dataTransfer.files);
+  });
+  // 페이지 전체에 놓아도 파일이 열리지 않게
+  window.addEventListener('dragover', function (e) { e.preventDefault(); });
+  window.addEventListener('drop', function (e) { e.preventDefault(); });
+
+  $('resetBtn').addEventListener('click', resetUI);
+  $('errorResetBtn').addEventListener('click', resetUI);
+})();
+</script>
+</body>
+</html>
