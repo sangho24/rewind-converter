@@ -9,7 +9,7 @@
  * - IP·이메일·전화번호는 코드에 포함하지 않는다. 캡션은 옵트인 + @멘션 마스킹
  *
  * 타임존: 내보내기 HTML에 표기된 시각을 그대로 사용한다 (변환 없음).
- * 인스타그램 HTML 내보내기는 요청 계정의 로케일 형식으로 시각을 렌더링하며,
+ * 인스타그램 HTML 내보내기는 요청 계정의 로캘 형식으로 시각을 렌더링하며,
  * 미니앱 레퍼런스 구현과 동일한 해석을 유지한다.
  */
 'use strict';
@@ -181,7 +181,7 @@ function scanMessagesFast(text, thread) {
   return n;
 }
 
-// 클래스 난독화가 바뀜 내보내기용 완화 경로: 클래스 부분 일치 기반
+// 클래스 난독화가 바뀐 내보내기용 완화 경로: 클래스 부분 일치 기반
 function scanMessagesRelaxed(text, thread) {
   var re = /<h2 class="[^"]*_a6-h[^"]*">([\s\S]*?)<\/h2>|<div class="[^"]*_a6-o[^"]*">([^<]*)<\/div>/g;
   var m, sender = null, n = 0;
